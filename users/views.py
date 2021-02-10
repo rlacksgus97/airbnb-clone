@@ -6,6 +6,7 @@ from django.urls import reverse_lazy
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login, logout
 from django.core.files.base import ContentFile
+from django.contrib import messages
 from . import forms, models
 
 class LoginView(FormView):
@@ -17,13 +18,13 @@ class LoginView(FormView):
     def form_valid(self, form):
         email = form.cleaned_data.get("email")
         password = form.cleaned_data.get("password")
-        user = authenticate(self.reqeust, username=email, password=password)
+        user = authenticate(self.request, username=email, password=password)
         if user is not None:
             login(self.request, user)
         return super().form_valid(form)
 
 def log_out(request):
-    logout(reqeust)
+    logout(request)
     return redirect(reverse("core:home"))
 
 class SignUpView(FormView):
@@ -36,7 +37,7 @@ class SignUpView(FormView):
         form.save()
         email = form.cleaned_data.get("email")
         password = form.cleaned_data.get("password")
-        user = authenticate(self.reqeust, username=email, password=password)
+        user = authenticate(self.request, username=email, password=password)
         if user is not None:
             login(self.request, user)
         user.verify_email()
@@ -66,7 +67,7 @@ def github_callback(request):
         client_secrete = os.environ.get("GH_SECRET")
         code = request.GET.get("code", None)
         if code is not None:
-            token_request = reqeusts.post(f"https://github.com/login/oauth/access_token?client_id={client_id}&client_secret={client_secret}&code={code}",
+            token_request = requests.post(f"https://github.com/login/oauth/access_token?client_id={client_id}&client_secret={client_secret}&code={code}",
                                             headers={"Accept": "application/json"},)
             token_json = token_request.json()
             error = token_json.get("error", None)
@@ -109,7 +110,8 @@ class KakaoException(Exception):
 
 def kakao_callback(request):
     try:
-        code = reqeust.GET.get("code")
+        code = request.GET.get("code")
+        raise KakaoException()
         client_id = os.environ.get("KAKAO_ID")
         redirect_uri = "http://127.0.0.1:8000/users/login/kakao/callback"
         token_request = requests.get(f"https://kauth.kakao.com/oauth/token?grant_type=authorization_code&client_id={client_id}&redirect_uri={redirect_uri}&code={code}")
@@ -147,4 +149,5 @@ def kakao_callback(request):
         login(request, user)
         return redirect(reverse("core:home"))
     except KakaoException:
+        messages.error(request, "Something went wrong")
         return redirect(reverse("users:login"))
