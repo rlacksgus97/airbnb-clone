@@ -21,10 +21,12 @@ class LoginView(FormView):
         user = authenticate(self.request, username=email, password=password)
         if user is not None:
             login(self.request, user)
+            messages.success(self.request, f"Welcome back {user.first_name}")
         return super().form_valid(form)
 
 def log_out(request):
     logout(request)
+    messages.info(request, "See you later")
     return redirect(reverse("core:home"))
 
 class SignUpView(FormView):
@@ -153,3 +155,7 @@ def kakao_callback(request):
     except KakaoException as e:
         messages.error(request, e)
         return redirect(reverse("users:login"))
+
+class UserProfileView(DetailView):
+    pass
+
