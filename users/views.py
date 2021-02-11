@@ -7,9 +7,10 @@ from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login, logout
 from django.core.files.base import ContentFile
 from django.contrib import messages
-from . import forms, models
+from django.contrib.messages.views import SuccessMessageMixin
+from . import forms, models, mixins
 
-class LoginView(FormView):
+class LoginView(mixins.LoggedOutOnlyView, FormView):
 
     template_name = "users/login.html"
     form_class = forms.LoginForm
@@ -29,7 +30,7 @@ def log_out(request):
     messages.info(request, "See you later")
     return redirect(reverse("core:home"))
 
-class SignUpView(FormView):
+class SignUpView(mixins.LoggedOutOnlyView, FormView):
     
     template_name = "users/signup.html"
     form_class = forms.SignUpForm
@@ -165,7 +166,7 @@ class UserProfileView(DetailView):
         context["hello"] = "Hello!"
         return context
 
-class UpdateProfileView(UpdateView):
+class UpdateProfileView(SuccessMessageMixin, UpdateView):
     model = models.User
     template_name = "users/update-profile.html"
     fields = (
@@ -178,6 +179,7 @@ class UpdateProfileView(UpdateView):
         "language",
         "currency",
     )
+    succsess_message = "Profile Updated"
 
     def get_object(self, queryset=None):
         return self.request.user
@@ -187,9 +189,10 @@ class UpdateProfileView(UpdateView):
         form.fields['birthdate'].widget.attrs = {'placeholder': "Birthdate"}
         return form
 
-class UpdatePasswordView(PasswordChangeView):
+class UpdatePasswordView(SuccessMessageMixin, PasswordChangeView):
 
     template_name = "users/update-password.html"
+    succsess_message = "Password Updated"
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class=form_class)
@@ -197,3 +200,6 @@ class UpdatePasswordView(PasswordChangeView):
         form.fields['new_password1'].widget.attrs = {'placeholder': "New Password"}
         form.fields['new_password2'].widget.attrs = {'placeholder': "Confirm New Password"}        
         return form
+
+    def get_success_url(self):
+        return self.request.user.get_absolute_url()
